@@ -1,19 +1,37 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 from typing import List
-from tdm import TDM
 
-app = FastAPI(title="tdm API")
-tdm_engine = TDM()
+from tdm_engine import tdm_trace, anomaly_score
 
-class Numbers(BaseModel):
+app = FastAPI(title="TDM Audit Engine")
+
+class AuditRequest(BaseModel):
     numbers: List[int]
-
-@app.get("/")
-def root():
-    return {"status": "tdm API rodando"}
+    threshold: float = 1.0
 
 @app.post("/audit")
-def audit_numbers(payload: Numbers):
-    report = tdm_engine.audit(payload.numbers)
-    return report
+async def audit(req: AuditRequest):
+    results = []
+
+    for n in req.numbers:
+        trace = tdm_trace(n)
+        anomaly = anomaly_score(trace)
+
+        classification = (
+            "COMPATIVEL_COM_CHAVE_REAL"
+            if anomaly <= req.threshold
+            else "ANOMALIA_DETECTADA"
+        )
+
+        results.append({
+            "number": n,
+            "trace": trace,
+            "anomaly_score": anomaly,
+            "classification": classification
+        })
+
+    return {
+        "threshold": req.threshold,
+        "results": results
+    }
