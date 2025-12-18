@@ -3,15 +3,15 @@ from pydantic import BaseModel
 from typing import List
 from tdm import tdm
 
-app = FastAPI(title="TDM API")
-tdm_engine = TDM()
+app = FastAPI(title="tdm API")
+tdm_engine = tdm()
 
 class Numbers(BaseModel):
     numbers: List[int]
 
 @app.get("/")
 def root():
-    return {"status": "TDM API rodando"}
+    return {"status": "tdm API rodando"}
 
 @app.post("/audit")
 def audit_numbers(payload: Numbers):
