@@ -1,24 +1,31 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
-from tdm import TDM  # aqui importa a classe que você já tem
+from typing import List
+from tdm import TDM  # certifique-se que o TDM.py está no mesmo diretório
 
-app = FastAPI()
+# Inicializa FastAPI e TDM
+app = FastAPI(title="TDM API", version="1.0")
 tdm = TDM()
 
-class NumbersRequest(BaseModel):
-    numbers: list[int]
+# Modelo de dados para envio
+class AuditRequest(BaseModel):
+    numbers: List[int]
+    threshold: float = 3.0
 
+# Endpoint raiz
 @app.get("/")
 def root():
     return {"status": "TDM API rodando"}
 
+# Endpoint de auditoria
 @app.post("/audit")
-def audit(request: NumbersRequest):
-    report = tdm.audit(request.numbers)
+def audit(request: AuditRequest):
+    report = tdm.audit(request.numbers, request.threshold)
     return report
 
+# Endpoint de geração de laudo
 @app.post("/generate_laudo")
-def generate_laudo(request: NumbersRequest):
-    report = tdm.audit(request.numbers)
+def generate_laudo(request: AuditRequest):
+    report = tdm.audit(request.numbers, request.threshold)
     tdm.generate_laudo(report)
-    return {"status": "Laudo gerado", "numbers": request.numbers}
+    return {"status": "Laudo gerado com sucesso", "numbers": request.numbers}
