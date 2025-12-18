@@ -1,14 +1,14 @@
 import math
 import statistics
 import json
-from datetime import datetime, timezone
-from typing import List, Dict, Any
 import logging
 import os
+from datetime import datetime, timezone
+from typing import List, Dict, Any, Optional
 
-# =========================
-# Configuração de logging
-# =========================
+# ============================================================
+# CONFIGURAÇÃO DE LOGGING
+# ============================================================
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
@@ -18,105 +18,140 @@ logging.basicConfig(
     ]
 )
 
-# =========================
-# Classe principal TDM
-# =========================
+# ============================================================
+# TDM ENGINE
+# ============================================================
 class TDM:
     """
     TDM — Teoria das Decomposições Multiplicativas
-    Produto: TDM Engine (versão expandida)
+
+    Produto: TDM Engine
+    Natureza: Auditoria estrutural criptográfica
+    Escopo: Detecção de padrões artificiais e anomalias matemáticas
     """
 
-    def __init__(self, moduli: List[int] | None = None):
-        self.version = "TDM-ENGINE-PROD-1.0"
+    # --------------------------------------------------------
+    # Inicialização
+    # --------------------------------------------------------
+    def __init__(self, moduli: Optional[List[int]] = None):
+        self.version = "TDM-ENGINE-CORE-1.0"
+
+        # Conjunto modular fixo (não sensível)
         self.moduli = moduli or [
-            3, 5, 7, 11, 13, 17, 19, 23,
-            29, 31, 37, 41, 43, 47, 53
+            3, 5, 7, 11, 13, 17, 19,
+            23, 29, 31, 37, 41, 43,
+            47, 53
         ]
+
         logging.info(f"TDM Engine inicializada — versão {self.version}")
 
-    # =========================
-    # Pré-processamento
-    # =========================
+    # ========================================================
+    # 1. PRÉ-PROCESSAMENTO
+    # ========================================================
     def preprocess(self, n: int) -> int:
-        if not isinstance(n, int) or n <= 0:
-            raise ValueError("Número inválido")
+        """
+        Normaliza o número sem extrair fatores relevantes.
+        Remove potências triviais de 2 (estrutura pública).
+        """
+        if not isinstance(n, int) or n <= 1:
+            raise ValueError("Entrada inválida")
+
         while n % 2 == 0:
             n //= 2
+
         return n
 
-    # =========================
-    # Estrutura modular
-    # =========================
+    # ========================================================
+    # 2. MAPA ESTRUTURAL
+    # ========================================================
     def structural_map(self, n: int) -> Dict[str, Any]:
+        """
+        Cria a assinatura estrutural modular do número.
+        """
         residues = [n % m for m in self.moduli]
+
         return {
             "residues": residues,
-            "log_scale": math.log(n),
-            "bit_length": n.bit_length()
+            "bit_length": n.bit_length(),
+            "log_scale": math.log(n)
         }
 
-    # =========================
-    # Operador estrutural
-    # =========================
-    def operator(self, structure: Dict[str, Any]) -> Dict[str, Any]:
+    # ========================================================
+    # 3. OPERADOR TDM
+    # ========================================================
+    def operator(self, structure: Dict[str, Any]) -> Dict[str, float]:
         residues = structure["residues"]
 
+        mean = statistics.mean(residues)
+        stdev = statistics.pstdev(residues)
+
         entropy = self._entropy(residues)
-        den = math.log2(len(self.moduli)) if len(self.moduli) > 1 else 1.0
-        entropy_norm = entropy / den
+        entropy_norm = entropy / math.log2(len(self.moduli))
 
         symmetry = self._residual_symmetry(residues)
 
+        dispersion = stdev / (mean + 1e-12)
+
         return {
-            "mean": statistics.mean(residues),
-            "stdev": statistics.pstdev(residues),
+            "mean": mean,
+            "stdev": stdev,
             "entropy": entropy,
             "entropy_norm": entropy_norm,
             "symmetry": symmetry,
+            "dispersion": dispersion,
             "scale": structure["log_scale"]
         }
 
-    # =========================
-    # Traço TDM
-    # =========================
-    def extract_trace(self, features: Dict[str, Any]) -> float:
+    # ========================================================
+    # 4. EXTRAÇÃO DO TRAÇO TDM
+    # ========================================================
+    def extract_trace(self, features: Dict[str, float]) -> float:
+        """
+        Traço escalar invariável.
+        """
         return (
             features["mean"]
             + 2.0 * features["stdev"]
             + 3.0 * features["entropy_norm"]
             + features["symmetry"]
+            + features["dispersion"]
             + 0.01 * features["scale"]
         )
 
-    # =========================
-    # Classificação
-    # =========================
+    # ========================================================
+    # 5. CLASSIFICAÇÃO
+    # ========================================================
     def classify(self, score: float) -> str:
-        if score > 4.5:
+        if score >= 4.5:
             return "PROVAVEL_CHAVE_ARTIFICIAL"
-        if score > 3.0:
+        if score >= 3.0:
             return "SUSPEITA_ESTRUTURAL"
         return "COMPATIVEL_COM_CHAVE_REAL"
 
-    # =========================
-    # Cálculo individual
-    # =========================
-    def compute(self, n: int) -> float:
-        try:
-            n0 = self.preprocess(n)
-            structure = self.structural_map(n0)
-            features = self.operator(structure)
-            return self.extract_trace(features)
-        except Exception as e:
-            logging.error(f"Erro ao processar {n}: {e}")
-            return float("nan")
+    # ========================================================
+    # 6. CÁLCULO INDIVIDUAL
+    # ========================================================
+    def compute(self, n: int) -> Dict[str, Any]:
+        """
+        Avalia um único número e retorna estrutura completa.
+        """
+        n0 = self.preprocess(n)
+        structure = self.structural_map(n0)
+        features = self.operator(structure)
+        trace = self.extract_trace(features)
 
-    # =========================
-    # Auditoria em lote
-    # =========================
-    def audit(self, numbers: List[int], threshold: float = 3.0) -> Dict[str, Any]:
-        traces = [self.compute(n) for n in numbers]
+        return {
+            "number": n,
+            "trace": trace,
+            "features": features
+        }
+
+    # ========================================================
+    # 7. AUDITORIA EM LOTE
+    # ========================================================
+    def audit(self, numbers: List[int]) -> Dict[str, Any]:
+        evaluations = [self.compute(n) for n in numbers]
+        traces = [e["trace"] for e in evaluations]
 
         baseline = {
             "mean": statistics.mean(traces),
@@ -126,11 +161,11 @@ class TDM:
         }
 
         results = []
-        for n, t in zip(numbers, traces):
-            score = abs(t - baseline["mean"]) / (baseline["stdev"] + 1e-12)
+        for e in evaluations:
+            score = abs(e["trace"] - baseline["mean"]) / (baseline["stdev"] + 1e-12)
             results.append({
-                "number": n,
-                "trace": t,
+                "number": e["number"],
+                "trace": e["trace"],
                 "anomaly_score": score,
                 "classification": self.classify(score)
             })
@@ -138,48 +173,47 @@ class TDM:
         report = {
             "tdm_version": self.version,
             "timestamp": datetime.now(timezone.utc)
-            .isoformat()
-            .replace("+00:00", "Z"),
+                .isoformat().replace("+00:00", "Z"),
             "baseline": baseline,
-            "threshold": threshold,
             "results": results
         }
 
-        logging.info(f"Auditoria concluída — {len(numbers)} números")
+        logging.info(f"Auditoria concluída — {len(numbers)} entradas")
         return report
 
-    # =========================
-    # Laudo técnico
-    # =========================
+    # ========================================================
+    # 8. LAUDO TÉCNICO (HUMANO + JSON)
+    # ========================================================
     def generate_laudo(self, report: Dict[str, Any], folder: str = "reports") -> None:
         os.makedirs(folder, exist_ok=True)
+        ts = datetime.now().strftime("%Y%m%d_%H%M%S")
 
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        txt_path = os.path.join(folder, f"laudo_tdm_{timestamp}.txt")
-        json_path = os.path.join(folder, f"laudo_tdm_{timestamp}.json")
+        txt_path = os.path.join(folder, f"laudo_tdm_{ts}.txt")
+        json_path = os.path.join(folder, f"laudo_tdm_{ts}.json")
 
         lines = [
-            "LAUDO TÉCNICO — TDM",
-            "=" * 60,
-            f"Versão        : {report['tdm_version']}",
-            f"Data (UTC)   : {report['timestamp']}",
+            "LAUDO TÉCNICO — TDM ENGINE",
+            "=" * 70,
+            f"Versão      : {report['tdm_version']}",
+            f"Data (UTC) : {report['timestamp']}",
             "",
             "BASELINE",
-            "-" * 60
+            "-" * 70
         ]
 
         for k, v in report["baseline"].items():
-            lines.append(f"{k:<8}: {v:.6f}")
+            lines.append(f"{k:<10}: {v:.6f}")
 
-        lines.append("\nANÁLISE\n" + "-" * 60)
+        lines.append("\nANÁLISE INDIVIDUAL")
+        lines.append("-" * 70)
 
         for r in report["results"]:
             lines.extend([
-                f"Número         : {r['number']}",
-                f"Traço TDM      : {r['trace']:.6f}",
-                f"Score          : {r['anomaly_score']:.6f}",
-                f"Classificação  : {r['classification']}",
-                "-" * 60
+                f"Número        : {r['number']}",
+                f"Traço TDM     : {r['trace']:.6f}",
+                f"Score         : {r['anomaly_score']:.6f}",
+                f"Classificação : {r['classification']}",
+                "-" * 70
             ])
 
         with open(txt_path, "w", encoding="utf-8") as f:
@@ -188,11 +222,11 @@ class TDM:
         with open(json_path, "w", encoding="utf-8") as f:
             json.dump(report, f, indent=2, ensure_ascii=False)
 
-        logging.info(f"Laudo salvo em {txt_path}")
+        logging.info(f"Laudo gerado: {txt_path}")
 
-    # =========================
-    # Funções internas
-    # =========================
+    # ========================================================
+    # FUNÇÕES INTERNAS (NÃO EXPOSTAS)
+    # ========================================================
     def _entropy(self, data: List[int]) -> float:
         counts = {}
         for x in data:
@@ -207,11 +241,10 @@ class TDM:
         return ent
 
     def _residual_symmetry(self, residues: List[int]) -> float:
-        if len(residues) < 2:
-            return 0.0
         diffs = [
             abs(residues[i] - residues[i - 1])
             for i in range(1, len(residues))
         ]
-        return statistics.pstdev(diffs)
+        return statistics.pstdev(diffs) if diffs else 0.0
+
 
