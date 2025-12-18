@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 from typing import List
-from TDM import TDM
+from tdm import tdm
 
 app = FastAPI(title="TDM API")
 tdm_engine = TDM()
