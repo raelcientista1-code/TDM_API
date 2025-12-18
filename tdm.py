@@ -17,6 +17,11 @@ logging.basicConfig(
 )
 
 class TDM:
+    """
+    TDM — Teoria das Decomposicoes Multiplicativas
+    Produto: TDM Engine (versao expandida)
+    """
+
     def __init__(self, moduli: List[int] = None):
         self.version = "TDM-ENGINE-PROD-1.0"
         self.moduli = moduli or [
@@ -55,7 +60,7 @@ class TDM:
         }
 
     def extract_trace(self, features: Dict[str, Any]) -> float:
-        return features["mean"] + 2.0*features["stdev"] + 3.0*features["entropy_norm"] + features["symmetry"] + 0.01*features["scale"]
+        return features["mean"] + 2.0 * features["stdev"] + 3.0 * features["entropy_norm"] + features["symmetry"] + 0.01 * features["scale"]
 
     def classify(self, score: float) -> str:
         if score > 4.5:
@@ -70,7 +75,8 @@ class TDM:
             n0 = self.preprocess(n)
             structure = self.structural_map(n0)
             features = self.operator(structure)
-            return self.extract_trace(features)
+            trace = self.extract_trace(features)
+            return trace
         except Exception as e:
             logging.error(f"Erro ao processar {n}: {e}")
             return float("nan")
@@ -86,11 +92,12 @@ class TDM:
         results = []
         for n, t in zip(numbers, traces):
             score = abs(t - baseline["mean"]) / (baseline["stdev"] + 1e-12)
+            classification = self.classify(score)
             results.append({
                 "number": n,
                 "trace": t,
                 "anomaly_score": score,
-                "classification": self.classify(score),
+                "classification": classification,
             })
         report = {
             "tdm_version": self.version,
@@ -102,10 +109,39 @@ class TDM:
         logging.info(f"Auditoria finalizada para {len(numbers)} números")
         return report
 
+    def generate_laudo(self, report: Dict[str, Any], folder: str = "reports") -> None:
+        os.makedirs(folder, exist_ok=True)
+        txt_path = os.path.join(folder, f"laudo_tdm_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt")
+        json_path = txt_path.replace(".txt", ".json")
+        lines = [
+            "LAUDO TECNICO - TDM",
+            "=" * 60,
+            f"Versao do motor : {report['tdm_version']}",
+            f"Data (UTC)      : {report['timestamp']}",
+            "",
+            "1. BASELINE ESTATISTICO",
+            "-" * 60
+        ]
+        for k, v in report["baseline"].items():
+            lines.append(f"{k:<10}: {v:.6f}")
+        lines.append("\n2. ANALISE ESTRUTURAL\n" + "-" * 60)
+        for r in report["results"]:
+            lines.append(f"Numero           : {r['number']}")
+            lines.append(f"Traco TDM        : {r['trace']:.6f}")
+            lines.append(f"Score estrutural : {r['anomaly_score']:.6f}")
+            lines.append(f"Classificacao    : {r['classification']}")
+            lines.append("-" * 60)
+        text = "\n".join(lines)
+        with open(txt_path, "w", encoding="utf-8") as f:
+            f.write(text)
+        with open(json_path, "w", encoding="utf-8") as f:
+            json.dump(report, f, indent=2, ensure_ascii=True)
+        logging.info(f"Laudo gerado: {txt_path} e {json_path}")
+
     def _entropy(self, data: List[int]) -> float:
         counts = {}
         for x in data:
-            counts[x] = counts.get(x,0)+1
+            counts[x] = counts.get(x, 0) + 1
         ent = 0.0
         total = len(data)
         for c in counts.values():
@@ -114,5 +150,5 @@ class TDM:
         return ent
 
     def _residual_symmetry(self, residues: List[int]) -> float:
-        diffs = [abs(residues[i] - residues[i-1]) for i in range(1, len(residues))]
+        diffs = [abs(residues[i] - residues[i - 1]) for i in range(1, len(residues))]
         return statistics.pstdev(diffs)
