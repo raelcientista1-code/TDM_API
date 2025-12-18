@@ -4,7 +4,7 @@ from typing import List
 from tdm import TDM
 
 app = FastAPI(title="tdm API")
-tdm_engine = tdm()
+tdm_engine = TDM()
 
 class Numbers(BaseModel):
     numbers: List[int]
