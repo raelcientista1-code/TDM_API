@@ -17,16 +17,28 @@ def anomaly_score(trace: float) -> float:
 
 @app.post("/audit")
 async def audit(req: AuditRequest):
+    traces = [tdm.compute(n) for n in req.numbers]
+
+    mean = statistics.mean(traces)
+    stdev = statistics.pstdev(traces) + 1e-12
+
     results = []
-    for n in req.numbers:
-        trace = tdm_trace(n)
-        anomaly = anomaly_score(trace)
+    for n, t in zip(req.numbers, traces):
+        score = abs(t - mean) / stdev
+        classification = tdm.classify(score)
+
         results.append({
             "number": n,
-            "trace": trace,
-            "anomaly_score": anomaly
+            "trace": t,
+            "anomaly_score": score,
+            "classification": classification
         })
+
     return {"results": results}
+
+
+
+
 
 @app.get("/health")
 async def health():
