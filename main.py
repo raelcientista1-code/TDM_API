@@ -1,13 +1,13 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 from typing import List
-from tdm import TDM  # certifique-se que o TDM.py está no mesmo diretório
+from TDM import TDM  # Certifique-se que o arquivo TDM.py está no mesmo diretório
 
 # Inicializa FastAPI e TDM
 app = FastAPI(title="TDM API", version="1.0")
 tdm = TDM()
 
-# Modelo de dados para envio
+# Modelo para auditoria
 class AuditRequest(BaseModel):
     numbers: List[int]
     threshold: float = 3.0
