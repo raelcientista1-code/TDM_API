@@ -24,19 +24,12 @@ logging.basicConfig(
 class TDM:
     """
     TDM — Teoria das Decomposições Multiplicativas
-
-    Produto: TDM Engine
-    Natureza: Auditoria estrutural criptográfica
-    Escopo: Detecção de padrões artificiais e anomalias matemáticas
+    Auditoria estrutural criptográfica
     """
 
-    # --------------------------------------------------------
-    # Inicialização
-    # --------------------------------------------------------
     def __init__(self, moduli: Optional[List[int]] = None):
-        self.version = "TDM-ENGINE-CORE-1.0"
+        self.version = "TDM-ENGINE-CORE-1.1"
 
-        # Conjunto modular fixo (não sensível)
         self.moduli = moduli or [
             3, 5, 7, 11, 13, 17, 19,
             23, 29, 31, 37, 41, 43,
@@ -49,10 +42,6 @@ class TDM:
     # 1. PRÉ-PROCESSAMENTO
     # ========================================================
     def preprocess(self, n: int) -> int:
-        """
-        Normaliza o número sem extrair fatores relevantes.
-        Remove potências triviais de 2 (estrutura pública).
-        """
         if not isinstance(n, int) or n <= 1:
             raise ValueError("Entrada inválida")
 
@@ -65,57 +54,60 @@ class TDM:
     # 2. MAPA ESTRUTURAL
     # ========================================================
     def structural_map(self, n: int) -> Dict[str, Any]:
-        """
-        Cria a assinatura estrutural modular do número.
-        """
-        residues = [n % m for m in self.moduli]
-
         return {
-            "residues": residues,
+            "residues": [n % m for m in self.moduli],
             "bit_length": n.bit_length(),
-            "log_scale": math.log(n)
+            "log_scale": math.log(n),
+            "decimal_entropy": self._decimal_entropy(n),
+            "digit_diversity": self._digit_diversity(n)
         }
 
     # ========================================================
     # 3. OPERADOR TDM
     # ========================================================
-    def operator(self, structure: Dict[str, Any]) -> Dict[str, float]:
-        residues = structure["residues"]
+    def operator(self, s: Dict[str, Any]) -> Dict[str, float]:
+        residues = s["residues"]
 
         mean = statistics.mean(residues)
         stdev = statistics.pstdev(residues)
 
-        entropy = self._entropy(residues)
-        entropy_norm = entropy / math.log2(len(self.moduli))
+        entropy_mod = self._entropy(residues)
+        entropy_mod_norm = entropy_mod / math.log2(len(self.moduli))
 
         symmetry = self._residual_symmetry(residues)
-
         dispersion = stdev / (mean + 1e-12)
+
+        # Penalizações criptográficas
+        bit_penalty = max(0.0, 2048 - s["bit_length"]) / 2048
+        decimal_penalty = 1.0 - s["decimal_entropy"]
+        digit_penalty = 1.0 - s["digit_diversity"]
 
         return {
             "mean": mean,
             "stdev": stdev,
-            "entropy": entropy,
-            "entropy_norm": entropy_norm,
+            "entropy_mod": entropy_mod_norm,
             "symmetry": symmetry,
             "dispersion": dispersion,
-            "scale": structure["log_scale"]
+            "bit_penalty": bit_penalty,
+            "decimal_penalty": decimal_penalty,
+            "digit_penalty": digit_penalty,
+            "scale": s["log_scale"]
         }
 
     # ========================================================
-    # 4. EXTRAÇÃO DO TRAÇO TDM
+    # 4. TRAÇO TDM (UNIFICADO)
     # ========================================================
-    def extract_trace(self, features: Dict[str, float]) -> float:
-        """
-        Traço escalar invariável.
-        """
+    def extract_trace(self, f: Dict[str, float]) -> float:
         return (
-            features["mean"]
-            + 2.0 * features["stdev"]
-            + 3.0 * features["entropy_norm"]
-            + features["symmetry"]
-            + features["dispersion"]
-            + 0.01 * features["scale"]
+            f["mean"]
+            + 2.0 * f["stdev"]
+            + 3.0 * f["entropy_mod"]
+            + f["symmetry"]
+            + f["dispersion"]
+            + 2.5 * f["bit_penalty"]
+            + 2.0 * f["decimal_penalty"]
+            + 1.5 * f["digit_penalty"]
+            + 0.01 * f["scale"]
         )
 
     # ========================================================
@@ -132,18 +124,15 @@ class TDM:
     # 6. CÁLCULO INDIVIDUAL
     # ========================================================
     def compute(self, n: int) -> Dict[str, Any]:
-        """
-        Avalia um único número e retorna estrutura completa.
-        """
         n0 = self.preprocess(n)
-        structure = self.structural_map(n0)
-        features = self.operator(structure)
-        trace = self.extract_trace(features)
+        s = self.structural_map(n0)
+        f = self.operator(s)
+        trace = self.extract_trace(f)
 
         return {
             "number": n,
             "trace": trace,
-            "features": features
+            "features": f
         }
 
     # ========================================================
@@ -170,7 +159,7 @@ class TDM:
                 "classification": self.classify(score)
             })
 
-        report = {
+        return {
             "tdm_version": self.version,
             "timestamp": datetime.now(timezone.utc)
                 .isoformat().replace("+00:00", "Z"),
@@ -178,54 +167,8 @@ class TDM:
             "results": results
         }
 
-        logging.info(f"Auditoria concluída — {len(numbers)} entradas")
-        return report
-
     # ========================================================
-    # 8. LAUDO TÉCNICO (HUMANO + JSON)
-    # ========================================================
-    def generate_laudo(self, report: Dict[str, Any], folder: str = "reports") -> None:
-        os.makedirs(folder, exist_ok=True)
-        ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-
-        txt_path = os.path.join(folder, f"laudo_tdm_{ts}.txt")
-        json_path = os.path.join(folder, f"laudo_tdm_{ts}.json")
-
-        lines = [
-            "LAUDO TÉCNICO — TDM ENGINE",
-            "=" * 70,
-            f"Versão      : {report['tdm_version']}",
-            f"Data (UTC) : {report['timestamp']}",
-            "",
-            "BASELINE",
-            "-" * 70
-        ]
-
-        for k, v in report["baseline"].items():
-            lines.append(f"{k:<10}: {v:.6f}")
-
-        lines.append("\nANÁLISE INDIVIDUAL")
-        lines.append("-" * 70)
-
-        for r in report["results"]:
-            lines.extend([
-                f"Número        : {r['number']}",
-                f"Traço TDM     : {r['trace']:.6f}",
-                f"Score         : {r['anomaly_score']:.6f}",
-                f"Classificação : {r['classification']}",
-                "-" * 70
-            ])
-
-        with open(txt_path, "w", encoding="utf-8") as f:
-            f.write("\n".join(lines))
-
-        with open(json_path, "w", encoding="utf-8") as f:
-            json.dump(report, f, indent=2, ensure_ascii=False)
-
-        logging.info(f"Laudo gerado: {txt_path}")
-
-    # ========================================================
-    # FUNÇÕES INTERNAS (NÃO EXPOSTAS)
+    # FUNÇÕES INTERNAS
     # ========================================================
     def _entropy(self, data: List[int]) -> float:
         counts = {}
@@ -241,10 +184,24 @@ class TDM:
         return ent
 
     def _residual_symmetry(self, residues: List[int]) -> float:
-        diffs = [
-            abs(residues[i] - residues[i - 1])
-            for i in range(1, len(residues))
-        ]
+        diffs = [abs(residues[i] - residues[i - 1])
+                 for i in range(1, len(residues))]
         return statistics.pstdev(diffs) if diffs else 0.0
 
+    def _decimal_entropy(self, n: int) -> float:
+        digits = str(abs(n))
+        counts = {}
+        for d in digits:
+            counts[d] = counts.get(d, 0) + 1
 
+        ent = 0.0
+        total = len(digits)
+        for c in counts.values():
+            p = c / total
+            ent -= p * math.log2(p)
+
+        return ent / math.log2(10)
+
+    def _digit_diversity(self, n: int) -> float:
+        digits = set(str(abs(n)))
+        return len(digits) / 10.0
